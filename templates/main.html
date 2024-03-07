@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">{% block html %}
+    <head>{% block head %}
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <meta name="color-scheme" content="dark light">{# inform client color modes asap #}
+        <link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
+        <link rel="icon" href="{{ url_for('.favicon') }}">
+        <title>{{ config.WEBCAT_TITLE }}</title>
+    {% endblock head %}</head>
+    <body>
+        <main>
+            <h1>{{ config.WEBCAT_PAGE_TITLE }}</h1>
+            <p>{{ config.WEBCAT_PAGE_DESCRIPTION }}</p>
+            <p>{{ file_content }}</p>
+        </main>
+    </body>
+{% endblock html %}</html>
