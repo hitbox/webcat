@@ -1,3 +1,5 @@
+import sqlalchemy as sa
+
 from flask import Blueprint
 from flask import Flask
 from flask import current_app
@@ -28,9 +30,44 @@ class PrefixMiddleware:
             return self.app(environ, start_response)
         else:
             start_response('404', [('Content-Type', 'text/plain')])
-            return [ "This url does not belong to the app."
-                    f" Expected prefix {self.prefix!r}".encode()]
+            response = (
+                "This url does not belong to the app."
+                f" Expected prefix {self.prefix!r}".encode()
+            )
+            return [response]
 
+
+def database_result(engine, querydata):
+    """
+    Run query with engine and capture its result along with other configured
+    values intended for the templates.
+    """
+    with engine.connect() as conn:
+        result = conn.execute(querydata['query'])
+        result_data = dict(
+            title = querydata['title'],
+            id = querydata['id'],
+            result = dict(
+                fieldnames = result.keys(),
+                rows = result.all(),
+            ),
+        )
+        return result_data
+
+def database_data_from_config():
+    """
+    Package the results of configured queries into a list of dicts intended for
+    the templates.
+    """
+    servers = current_app.config['WEBCAT_SERVERS']
+    queries = current_app.config['WEBCAT_SHOW_QUERIES']
+
+    results = []
+    for querydata in queries:
+        url = servers[querydata['server']]
+        engine = sa.create_engine(url)
+        results.append(database_result(engine, querydata))
+    return results
 
 @catbp.route('/favicon')
 def favicon():
@@ -48,7 +85,12 @@ def output():
     """
     with open(current_app.config['WEBCAT_FILE']) as webcat_file:
         file_content = webcat_file.read()
-    return render_template('main.html', file_content=file_content)
+    database_results = database_data_from_config()
+    context = dict(
+        file_content = file_content,
+        database_results = database_results,
+    )
+    return render_template('main.html', **context)
 
 def create_app():
     """
@@ -56,6 +98,8 @@ def create_app():
     """
     app = Flask(__name__, instance_relative_config=True)
 
+    # Configuration from file pointed at by environment variable.
+    # The path is relative to this project's directory.
     app.config.from_envvar('WEBCAT_INSTANCE_RELATIVE_CONFIG')
 
     prefix = app.config.get('PREFIX')
