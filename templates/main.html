@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">{% block html %}
-    <head>{% block head %}
+    <head>{% block head -%}
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width,initial-scale=1">
         <meta name="color-scheme" content="dark light">{# inform client color modes asap #}
@@ -11,8 +11,35 @@
     <body>
         <main>
             <h1>{{ config.WEBCAT_PAGE_TITLE }}</h1>
-            <p>{{ config.WEBCAT_PAGE_DESCRIPTION }}</p>
-            <p>{{ file_content }}</p>
+            <div>
+                <p>{{ config.WEBCAT_PAGE_DESCRIPTION }}</p>
+                <p>{{ file_content }}</p>
+            </div>
+            <div>
+                <h1>Databases</h1>
+                {% for database_result in database_results -%}
+                <p><a href="#{{ database_result.id }}">{{ database_result.title }}</a></p>
+                {% endfor -%}
+            </div>
+            {%- for database_result in database_results -%}
+            <div>
+                {%- set result = database_result.result -%}
+                {%- set formatters = database_result.formatters -%}
+                <h1 id="{{ database_result.id }}">{{ database_result.title }}</h1>
+                <table>
+                    <thead>
+                        <tr>{%- for key in result.fieldnames -%}
+                            <th>{{ key }}</th>
+                        {%- endfor %}</tr>
+                    </thead>
+                    <tbody>
+                        {%- for row in result.rows %}<tr>
+                            {% for value in row %}<td>{{ value }}</td>{% endfor %}
+                        </tr>{%- endfor -%}
+                    </tbody>
+                </table>
+            </div>
+            {%- endfor -%}
         </main>
     </body>
 {% endblock html %}</html>
