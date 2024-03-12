@@ -3,8 +3,8 @@ import sqlalchemy as sa
 from flask import Blueprint
 from flask import Flask
 from flask import current_app
-from flask import render_template
 from flask import send_file
+from flask import stream_template
 
 catbp = Blueprint('cat', __name__)
 
@@ -90,7 +90,7 @@ def output():
         file_content = file_content,
         database_results = database_results,
     )
-    return render_template('main.html', **context)
+    return stream_template('main.html', **context)
 
 def create_app():
     """
