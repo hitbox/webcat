@@ -15,16 +15,15 @@
                 <p>{{ config.WEBCAT_PAGE_DESCRIPTION }}</p>
                 <p>{{ file_content }}</p>
             </div>
+            {%- if config.WEBCAT_SHOW_QUERIES -%}
             <div>
                 <h1>Databases</h1>
-                {% for database_result in database_results -%}
-                <p><a href="#{{ database_result.id }}">{{ database_result.title }}</a></p>
-                {% endfor -%}
+                {% for query in config.WEBCAT_SHOW_QUERIES %}<p>
+                    <a href="{{ query.id }}">{{ query.title }}</a>
+                </p>{% endfor %}
             </div>
-            {%- for database_result in database_results -%}
-            <div>
+            {%- for database_result in database_results %}<div>
                 {%- set result = database_result.result -%}
-                {%- set formatters = database_result.formatters -%}
                 <h1 id="{{ database_result.id }}">{{ database_result.title }}</h1>
                 <table>
                     <thead>
@@ -38,8 +37,8 @@
                         </tr>{%- endfor -%}
                     </tbody>
                 </table>
-            </div>
-            {%- endfor -%}
+            </div>{% endfor -%}
+            {%- endif -%}
         </main>
     </body>
 {% endblock html %}</html>
