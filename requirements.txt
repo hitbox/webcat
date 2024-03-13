@@ -1,3 +1,9 @@
 flask
-sqlalchemy
 pyodbc
+sqlalchemy
+
+# NOTE
+# this took some work to figure out
+# the url from github.com needs the prefix "git+"
+# then add a name with "#egg=<package-name>"
+-e git+https://github.com/hitbox/flask-okta.git#egg=flask-okta
