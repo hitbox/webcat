@@ -1,16 +1,17 @@
 import random
 import time
 
-import sqlalchemy as sa
-
 from flask import Blueprint
 from flask import Flask
 from flask import current_app
 from flask import request
 from flask import send_file
 from flask import stream_template
+from sqlalchemy import create_engine
+from sqlalchemy.orm import scoped_session
+from sqlalchemy.orm import sessionmaker
 
-catbp = Blueprint('cat', __name__)
+cat_bp = Blueprint('cat', __name__)
 
 class PrefixMiddleware:
     """
@@ -41,46 +42,50 @@ class PrefixMiddleware:
             return [response]
 
 
-def database_result(engine, querydata):
+class FlaskSQLAlchemy:
     """
-    Run query with engine and capture its result along with other configured
-    values intended for the templates.
+    Simple Flask extension with SQLAlchemy.
     """
-    with engine.connect() as conn:
-        result = conn.execute(querydata['query'])
-        result_data = dict(
-            title = querydata['title'],
-            id = querydata['id'],
-            result = dict(
-                fieldnames = result.keys(),
-                rows = result.all(),
-            ),
-        )
-        return result_data
+
+    def __init__(self, app=None):
+        if app is not None:
+            self.init_app(app)
+
+    def init_app(self, app):
+        self.binds = app.config.get('WEBCAT_BINDS', {})
+        for bindname, engine_options in self.binds.items():
+            self.binds[bindname] = create_engine(**engine_options)
+
+        self.session_makers = {
+            name: sessionmaker(engine) for name, engine in self.binds.items()
+        }
+        self.scoped_sessions = {
+            name: scoped_session(session_maker)
+            for name, session_maker in self.session_makers.items()
+        }
+
+        app.teardown_appcontext(self._teardown_session)
+
+    def _teardown_session(self, exception):
+        for scoped_session in self.scoped_sessions.values():
+            scoped_session.remove()
+
+
+db = FlaskSQLAlchemy()
 
 def database_data_from_config():
-    """
-    Package the results of configured queries into a list of dicts intended for
-    the templates.
-    """
-    servers = current_app.config['WEBCAT_SERVERS']
+    binds = current_app.config['WEBCAT_BINDS']
     queries = current_app.config['WEBCAT_SHOW_QUERIES']
 
-    if servers is None or queries is None:
-        # slow generator for development
-        return slow_database_results()
-    else:
-        # TODO
-        # - scoped session for app context
-        # - streamable instead of `all`
-        results = []
-        for querydata in queries:
-            url = servers[querydata['server']]
-            engine = sa.create_engine(url)
-            results.append(database_result(engine, querydata))
-        return results
+    for querydata in queries:
+        bindname = querydata['bind']
+        query = querydata['query']
+        bind = db.binds[bindname]
+        session = db.scoped_sessions[bindname]
+        result = session.execute(query)
+        yield result
 
-@catbp.route('/favicon')
+@cat_bp.route('/favicon')
 def favicon():
     """
     Instance specific favicon from config.
@@ -127,7 +132,7 @@ def slow_database_results():
             ),
         )
 
-@catbp.route('/')
+@cat_bp.route('/')
 def output():
     """
     Read file and render html.
@@ -148,6 +153,8 @@ def create_app():
     """
     app = Flask(__name__, instance_relative_config=True)
 
+    app.jinja_env.globals.update(zip=zip)
+
     # Configuration from file pointed at by environment variable.
     # The path is relative to this project's directory.
     app.config.from_envvar('WEBCAT_INSTANCE_RELATIVE_CONFIG')
@@ -156,5 +163,8 @@ def create_app():
     if prefix:
         app.wsgi_app = PrefixMiddleware(app.wsgi_app, prefix)
 
-    app.register_blueprint(catbp)
+    app.register_blueprint(cat_bp)
+
+    db.init_app(app)
+
     return app

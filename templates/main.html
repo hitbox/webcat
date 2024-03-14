@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">{% block html %}
+<html lang="en">{% block html -%}
     <head>{% block head -%}
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -19,21 +19,20 @@
             <div>
                 <h1>Databases</h1>
                 {% for query in config.WEBCAT_SHOW_QUERIES %}<p>
-                    <a href="{{ query.id }}">{{ query.title }}</a>
+                    <a href="#{{ query.id }}">{{ query.title }}</a>
                 </p>{% endfor %}
             </div>
-            {%- for database_result in database_results %}<div>
-                {%- set result = database_result.result -%}
-                <h1 id="{{ database_result.id }}">{{ database_result.title }}</h1>
+            {%- for result, query in zip(database_results, config.WEBCAT_SHOW_QUERIES) %}<div>
+                <h1 id="{{ query.id }}">{{ query.title }}</h1>
                 <table>
                     <thead>
-                        <tr>{%- for key in result.fieldnames -%}
+                        <tr>{%- for key in result.keys() -%}
                             <th>{{ key }}</th>
                         {%- endfor %}</tr>
                     </thead>
                     <tbody>
-                        {%- for row in result.rows %}<tr>
-                            {% for value in row %}<td>{{ value }}</td>{% endfor %}
+                        {%- for row in result %}<tr>{# minify -#}
+                            {% for value in row %}<td>{{ value }}</td>{% endfor -%}
                         </tr>{%- endfor -%}
                     </tbody>
                 </table>

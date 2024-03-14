@@ -39,3 +39,9 @@ td {
     font-family: monospace;
     font-size: 1rem;
 }
+
+@media (prefers-color-scheme: dark) {
+    th {
+        background: #111;
+    }
+}
